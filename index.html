@@ -478,6 +478,57 @@ body{
 .fin-spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* ── REIMBURSABLE ── */
+.fin-tx-reimb-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:0.58rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  padding:2px 7px;border-radius:8px;
+  background:rgba(91,156,246,0.18);color:#5B9CF6;
+  border:1px solid rgba(91,156,246,0.28);
+  margin-left:4px;flex-shrink:0;white-space:nowrap;
+}
+.fin-tx-reimb-badge.reimbursed{
+  background:rgba(62,207,112,0.15);color:var(--paid);
+  border-color:rgba(62,207,112,0.25);
+}
+.fin-cat-btn.reimb{
+  border-color:rgba(91,156,246,0.5);color:#5B9CF6;background:rgba(91,156,246,0.08);
+}
+.fin-cat-btn.reimb:hover,.fin-cat-btn.reimb.selected{
+  background:#5B9CF6;color:#0d0d0f;border-color:#5B9CF6;
+}
+.reimb-section{
+  margin-bottom:14px;padding:12px;
+  background:rgba(91,156,246,0.06);
+  border:1px solid rgba(91,156,246,0.18);
+  border-radius:12px;
+}
+.reimb-section-title{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5B9CF6;margin-bottom:10px;}
+.reimb-toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.reimb-toggle{
+  position:relative;width:38px;height:22px;flex-shrink:0;cursor:pointer;
+}
+.reimb-toggle input{opacity:0;width:0;height:0;}
+.reimb-toggle-slider{
+  position:absolute;inset:0;border-radius:11px;
+  background:var(--surface3);transition:background 0.2s;
+}
+.reimb-toggle-slider::before{
+  content:'';position:absolute;height:16px;width:16px;left:3px;top:3px;
+  border-radius:50%;background:#fff;transition:transform 0.2s;
+}
+.reimb-toggle input:checked+.reimb-toggle-slider{background:#5B9CF6;}
+.reimb-toggle input:checked+.reimb-toggle-slider::before{transform:translateX(16px);}
+.reimb-mark-btn{
+  margin-top:8px;width:100%;padding:10px;border-radius:10px;border:none;
+  background:#5B9CF6;color:#0d0d0f;font-family:'Inter',sans-serif;
+  font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.reimb-mark-btn:hover{opacity:0.85;}
+.reimb-mark-btn.done{background:var(--paid);}
+.fin-tx-item.is-reimb{opacity:0.72;}
+.fin-tx-item.is-reimb .fin-tx-amt.out{color:#5B9CF6;}
+
 @keyframes pageIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 .page-in{animation:pageIn 0.45s cubic-bezier(0.22,1,0.36,1) both;}
 </style>
@@ -563,10 +614,10 @@ body{
       <div class="fin-filter-group">
         <div class="fin-filter-group-label">📅 Período</div>
         <div class="fin-filter-row" id="finDateFilterBar">
-          <button class="fin-date-chip active" data-mode="all" onclick="applyDateFilter('all',this)">Tudo</button>
-          <button class="fin-date-chip" data-mode="thismonth" onclick="applyDateFilter('thismonth',this)">Este mês</button>
+          <button class="fin-date-chip active" data-mode="thismonth" onclick="applyDateFilter('thismonth',this)">Este mês</button>
           <button class="fin-date-chip" data-mode="lastmonth" onclick="applyDateFilter('lastmonth',this)">Mês passado</button>
           <button class="fin-date-chip" data-mode="range" onclick="applyDateFilter('range',this)">Intervalo…</button>
+          <button class="fin-date-chip" data-mode="all" onclick="applyDateFilter('all',this)">Tudo</button>
         </div>
         <div class="fin-date-range-row hidden" id="finDateRangeRow">
           <input type="date" class="fin-date-input" id="finDateFrom">
@@ -582,6 +633,7 @@ body{
           <div class="fin-filter-chip" data-filter="in" onclick="applyFinFilter('in',this)">✅ Entradas</div>
           <div class="fin-filter-chip" data-filter="out" onclick="applyFinFilter('out',this)">🔴 Saídas</div>
           <div class="fin-filter-chip" data-filter="uncat" onclick="applyFinFilter('uncat',this)">Sem categoria</div>
+          <div class="fin-filter-chip" data-filter="reimb" onclick="applyFinFilter('reimb',this)">🔄 Reembolsáveis</div>
         </div>
       </div>
       <div class="fin-filter-group">
@@ -596,6 +648,12 @@ body{
         <div class="fin-filter-group-label">🏷️ Categoria</div>
         <div class="fin-filter-row" id="finCatFilterRow">
           <div class="fin-filter-chip active" data-catfilter="all" onclick="applyCatFilter('all',this)">Todas</div>
+          <div class="fin-filter-chip" data-catfilter="__none__" onclick="applyCatFilter('__none__',this)">❓ Sem categoria</div>
+          <div class="fin-filter-chip" id="finCatExpandBtn" onclick="toggleCatFilter(this)" style="letter-spacing:0.05em;">···</div>
+        </div>
+        <div id="finCatFilterExpanded" style="display:none;">
+          <div id="finCatFilterSaidas"></div>
+          <div id="finCatFilterEntradas"></div>
         </div>
       </div>
     </div>
@@ -664,6 +722,20 @@ body{
     <div class="fin-modal-sub" id="finCatModalAmt">—</div>
     <div class="fin-modal-cats" id="finCatGrid"></div>
     <label class="fin-modal-toggle"><input type="checkbox" id="finCatLearn" checked><span>Aprender e aplicar a transações parecidas</span></label>
+    <!-- REIMBURSABLE SECTION -->
+    <div class="reimb-section" id="finReimbSection">
+      <div class="reimb-section-title">💼 Reembolso</div>
+      <div class="reimb-toggle-row">
+        <label class="reimb-toggle">
+          <input type="checkbox" id="finReimbToggle" onchange="onReimbToggleChange()">
+          <span class="reimb-toggle-slider"></span>
+        </label>
+        <span style="font-size:0.8rem;color:var(--text2);" id="finReimbLabel">Marcar como reembolsável pelo cliente</span>
+      </div>
+      <div id="finReimbReimburseRow" style="display:none;">
+        <button class="reimb-mark-btn" id="finReimbMarkBtn" onclick="markAsReimbursed()">✅ Marcar como reembolsado</button>
+      </div>
+    </div>
     <div class="fin-modal-actions">
       <button style="flex:1;background:var(--danger);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:500;cursor:pointer;" onclick="deleteFinTransaction()">🗑️ Remover</button>
       <button class="fin-btn-secondary" onclick="closeFinCatModal()">Cancelar</button>
@@ -831,6 +903,7 @@ const LS_CUSTOM_EXPENSE_CATS='fin_custom_expense_cats_v1';
 const LS_CUSTOM_SOURCES='fin_custom_income_sources_v1';
 const LS_EMOJI_OVERRIDES='fin_source_emoji_overrides_v1';
 const LS_SAIDA_OVERRIDES='fin_saida_cat_overrides_v1';
+const LS_REIMB='fin_reimb_v1'; // { [id_transacao]: 'reembolsavel' | 'reembolsado' }
 
 // ─── CATEGORIAS ───────────────────────────────────────────────────
 const CATEGORIAS_SAIDA_BASE=[
@@ -858,6 +931,7 @@ const CATEGORIAS_ENTRADA=[
   {id:'shifu',nome:'Shifu',emoji:'🎭'},
   {id:'casamentos',nome:'Casamentos',emoji:'💍'},
   {id:'freela',nome:'Freela',emoji:'💼'},
+  {id:'wise',nome:'Wise',emoji:'💸'},
 ];
 
 // ─── STATE ────────────────────────────────────────────────────────
@@ -880,8 +954,20 @@ const curMonthKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.ge
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 function catById(id){
-  if(!id)return{emoji:'📌',nome:'Sem categoria',id:null};
-  return CATEGORIAS.find(c=>c.id===id)||CATEGORIAS_ENTRADA.find(c=>c.id===id)||loadCustomExpenseCats().find(c=>c.id===id)||loadCustomSources().find(c=>c.id===id)||{emoji:'📌',nome:'Sem categoria',id:null};
+  if(!id)return{emoji:'❓',nome:'Sem categoria',id:null};
+  // Procura nas listas base (sempre disponíveis)
+  const found=CATEGORIAS.find(c=>c.id===id)||CATEGORIAS_ENTRADA.find(c=>c.id===id);
+  if(found)return found;
+  // Procura nas listas do localStorage (pode estar vazio em aba anónima)
+  const fromLS=loadCustomExpenseCats().find(c=>c.id===id)||loadCustomSources().find(c=>c.id===id);
+  if(fromLS)return fromLS;
+  // Fallback: tenta reconstruir nome legível a partir do ID (ex: "custom_ginasio_1234" → "Ginásio")
+  if(id.startsWith('custom_')){
+    const parts=id.replace(/^custom_/,'').replace(/_\d+$/,'').split('_');
+    const nome=parts.map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ');
+    return{emoji:'📌',nome,id};
+  }
+  return{emoji:'❓',nome:'Sem categoria',id:null};
 }
 
 // ─── LOCAL STORAGE HELPERS ───────────────────────────────────────
@@ -892,6 +978,183 @@ function loadCatMap(){return lsGet(LS_CAT_MAP,{});}
 function saveCatMap(m){lsSet(LS_CAT_MAP,m);}
 function normDesc(d){return String(d||'').toLowerCase().replace(/\s+/g,' ').trim();}
 
+// ─── LIMPEZA DE DESCRIÇÕES DO EXTRATO ────────────────────────────
+// Transforma descrições brutas do banco em nomes legíveis.
+function cleanDesc(raw){
+  if(!raw)return raw;
+  let d=String(raw).trim();
+
+  // 1. Serviços conhecidos (débitos diretos / subscrições)
+  const services=[
+    [/^UBER\s+TRIP\b.*/i,                        'Uber'],
+    [/^COMPRA\s+MB\s+CARTAO\s+\*+\s*\d+\*\s+UBER\s+TRIP\b.*/i, 'Uber (int\'l)'],
+    [/^Spotify\b.*/i,                             'Spotify'],
+    [/^eDreams\b.*/i,                             'eDreams'],
+    [/^Filx\s+SE\b.*/i,                           'Netflix'],
+    [/^GOOGLE\s+GOOGLE\s+ONE\b.*/i,               'Google One'],
+    [/^blssmup\.co\b.*/i,                         'Blissmup'],
+    [/^COBRANCA\s+SDD\s+EFIT\b.*/i,               'Ginásio'],
+  ];
+  for(const [re,name] of services){if(re.test(d))return name;}
+
+  // 2. Padrões CaixaGeral — subscrições (COMPRAS C.DEB)
+  const caixaSubs=[
+    [/^COMPRAS\s+C\.DEB\s+UBER\b.*/i,       'Uber'],
+    [/^COMPRAS\s+C\.DEB\s+UBER\s+T\b.*/i,   'Uber'],
+    [/^COMPRAS\s+C\.DEB\s+NETFLIX\b.*/i,    'Netflix'],
+    [/^COMPRAS\s+C\.DEB\s+SHEIN\b.*/i,      'Shein'],
+    [/^COMPRAS\s+C\.DEB\s+WWW\.AMA\b.*/i,   'Amazon'],
+    [/^CR\s+VCHER\s+CRT\s+DB\s+SHEIN\b.*/i, 'Shein (crédito)'],
+    [/^ANUL\s+COMPRA\s+PINGO\s+DOC.*/i,     'Anulação · Pingo Doce'],
+  ];
+  for(const [re,name] of caixaSubs){if(re.test(d))return name;}
+
+  // 3. Transferências CaixaGeral — "TFI Nome Truncado"
+  const tfi=d.match(/^TFI\s+(.+)$/i);
+  if(tfi){
+    const nome=toTitleCase(tfi[1].trim());
+    return `Transf. de ${nome}`;
+  }
+
+  // 4. MBWay CaixaGeral — "Trf Mbway 9XXXXXXX" ou "TRF MBWAY"
+  const mbwayCx=d.match(/^Trf\s+Mbway\s+(\d+XXX\d+)$/i);
+  if(mbwayCx)return `MBWay (${mbwayCx[1]})`;
+  if(/^TRF\s+MBWAY$/i.test(d))return 'MBWay';
+
+  // 5. Transferências CaixaGeral App
+  if(/^TRF\s+CXDAPP$/i.test(d))return 'Caixa Direta App';
+  if(/^TRF\s+IMEDIATA\s+NAC\s+OIC$/i.test(d))return 'Transferência Nacional';
+  if(/^TRF\s+IMEDIATA\s+INT\s+OIC$/i.test(d))return 'Transferência Internacional';
+
+  // 6. Compras simples CaixaGeral — "COMPRA NOME" (sem nº cartão)
+  // Exclui "COMPRA CARTAO **** ..." que é formato NovoBanco (tratado abaixo)
+  const compraCx=d.match(/^COMPRA\s+(?!(?:MB\s+)?CARTAO\s+\*+)(.+)$/i);
+  if(compraCx){
+    let nome=compraCx[1].trim();
+    // normaliza nomes conhecidos antes de capitalizar
+    const lojaMap=[
+      [/^CONTINENTE\s+LOU.*/i,    'Continente'],
+      [/^CONTIN\s+BOM\s+DIA.*/i,  'Continente'],
+      [/^PINGO\s+DOCE\s+AMA.*/i,  'Pingo Doce · Amadora'],
+      [/^PINGO\s+DOCE\s+POV.*/i,  'Pingo Doce · Póvoa'],
+      [/^MC\s+DONALDS?.*/i,       'McDonald\'s'],
+      [/^ALIEXPRESS\.COM.*/i,     'AliExpress'],
+      [/^MERCADONA.*/i,           'Mercadona'],
+      [/^AUCHAN\s+AMADORA.*/i,    'Auchan · Amadora'],
+      [/^PULL\s+BEAR.*/i,         'Pull & Bear'],
+      [/^ZARA.*/i,                'Zara'],
+      [/^VANILLA\s+MINIME.*/i,    'Vanilla Minimercado'],
+      [/^CTT\s*[-–]\s*CORREIOS.*/i,'CTT'],
+      [/^RITUALGLAMOUR.*/i,       'Ritual Glamour'],
+      [/^HAIR\s+BODY.*/i,         'Hair & Body'],
+      [/^ACBB\s+AMADORA.*/i,      'ACBB (Unhas) · Amadora'],
+      [/^PET\s+S\s+PARK\s+VEN.*/i,'Pet\'s Park'],
+      [/^SIMAR\s+SUPERMER.*/i,    'Simar Supermercado'],
+      [/^SHAPLA\s+MINIMER.*/i,    'Shapla Minimercado'],
+      [/^KCOSMETICOS.*/i,         'K Cosméticos'],
+      [/^LOJA\s+SHANGRILA.*/i,    'Shangri-La'],
+      [/^MA\s+MAISON.*/i,         'Ma Maison'],
+      [/^MARIA\s+NOIVAS.*/i,      'Maria Noivas'],
+      [/^AGRUPAMENTO\s+ES.*/i,    'Agrupamento Escolar'],
+      [/^AFROZHENG.*/i,           'Afrozheng'],
+      [/^JIANJUN\s+JI.*/i,        'Jianjun Ji'],
+      [/^NEW\s+STORY.*/i,         'New Story'],
+      [/^RESTAURANTE\s+QU.*/i,    'Restaurante'],
+      [/^INTERMARCHE.*/i,         'Intermarché'],
+    ];
+    for(const [re,label] of lojaMap){if(re.test(nome))return label;}
+    return toTitleCase(nome);
+  }
+
+  // 2. Transferências WISE
+  const wiseOut=d.match(/^TRF\s+CRED\s+SEPA\+\s+App\s+\d+\s+P\/\s+MEU\s+WISE$/i);
+  if(wiseOut)return 'Wise';
+  const wiseIn=d.match(/^DEVOLUCAO\s+TRF\.\s+INTERBANCARIA\s+DE\s+Wise$/i);
+  if(wiseIn)return 'Wise (devolução)';
+
+  // 3. Transferências SEPA+ recebidas: "TRF IMEDIATA SEPA+ DE Nome"
+  const sepaIn=d.match(/^TRF\s+IMEDIATA\s+SEPA\+\s+DE\s+(.+)$/i);
+  if(sepaIn){
+    const nome=toTitleCase(sepaIn[1].trim());
+    return `Transf. de ${nome}`;
+  }
+
+  // 4. MBWay enviado: "TRF IMEDIATA C/CARTAO (MBWAY)-APP TERCEIROS P/ Nome"
+  const mbwayOut=d.match(/^TRF\s+IMEDIATA\s+C\/CARTAO\s+\(MBWAY\)-APP\s+TERCEIROS\s+P\/\s+(.+)$/i);
+  if(mbwayOut){
+    // nome pode estar truncado — limpa e capitaliza
+    const nome=toTitleCase(mbwayOut[1].trim().replace(/\s+SO$/,''));
+    return `MBWay → ${nome}`;
+  }
+
+  // 5. Pagamento Estado
+  if(/^PAG\s+ESTADO\b/i.test(d))return 'Pagamento Estado';
+
+  // 6. Levantamento ATM
+  if(/^LEVANTAMENTO\s+NUMERARIO\s+EM\s+ATM/i.test(d))return 'Levantamento ATM';
+
+  // 7. Comissões / taxas
+  if(/^COMISSAO\s+PROC\.\s+TRANSACAO\s+INTERNACIONAL/i.test(d))return 'Comissão Internacional';
+  if(/^IMP\s+SELO\s+S\/\s+COM\s+TRF\s+IMEDIATA.*MBWAY/i.test(d))return 'Imposto Selo MBWay';
+  if(/^COM\s+S\/\s+TRF\s+IMEDIATA.*MBWAY/i.test(d))return 'Comissão MBWay';
+
+  // 8. Compras com cartão: "COMPRA CARTAO **** 645* LOJA   CIDADE"
+  //    ou "COMPRA MB CARTAO ****645* LOJA   CIDADE"
+  //    ou "Cartao **** 645* LOJA   CIDADE" (sem prefixo COMPRA — variante NovoBanco)
+  const compra=d.match(/^(?:COMPRA(?:\s+MB)?\s+)?CARTAO\s+\*+\s*\d+\*\s+(.+)$/i);
+  if(compra){
+    // parte depois do cartão: "PINGO DOCE POVOA S APOVOA DE SANTO A"
+    // último "token" costuma ser a cidade (ou CEP disfarçado) — remove CEP numérico
+    let rest=compra[1].replace(/\b\d{4}-\d{3}\b/g,'').trim(); // remove CEP "XXXX-XXX"
+    // separa nome da loja e localização pelo espaçamento duplo (banco usa 2+ espaços)
+    const parts=rest.split(/\s{2,}/);
+    let loja=parts[0]||rest;
+    let local=parts.slice(1).join(' ').trim();
+    // remove cidade duplicada no final (ex: "AMADORA AMADORA")
+    local=local.replace(/^(\S+)\s+\1$/i,'$1');
+    // capitaliza
+    loja=toTitleCase(loja.trim());
+    local=toTitleCase(local.trim());
+    // casos especiais de nome — se já inclui localização (·), ignora o local extraído
+    // Nomes especiais: array de [regex, label] — para no 1º match (evita replaces em cascata)
+    const lojaOrig=loja;
+    const njMap=[
+      [/^Continente\s+Bom\s+Dia\b.*/i,'Continente'],
+      [/^Contin\s+Bom\s+Dia\b.*/i,'Continente'],
+      [/^Continente\b.*/i,'Continente'],
+      [/^Pingo\s+Doce\s+Povoa\s+S\b.*/i,'Pingo Doce \u00b7 P\u00f3voa de Santo Adri\u00e3o'],
+      [/^Pingo\s+Doce\s+Amadora\b.*/i,'Pingo Doce \u00b7 Amadora'],
+      [/^Pingo\s+Doce\b.*/i,'Pingo Doce'],
+      [/^Auchan\s+Amadora\b.*/i,'Auchan \u00b7 Amadora'],
+      [/^Auchan\b.*/i,'Auchan'],
+      [/^Ikea\s+Alfragide\s+Caixas\s+Eco.*/i,'IKEA \u00b7 Alfragide'],
+      [/^Ikea\s+Alfragide\s+Ikea\s+Food.*/i,'IKEA Food \u00b7 Alfragide'],
+      [/^Ikea\s+Alfragide\b.*/i,'IKEA \u00b7 Alfragide'],
+      [/^Subway\s+Ubbo\b.*/i,'Subway \u00b7 Ubbo'],
+      [/^Bifanas\s+Vendas\b.*/i,'Bifanas'],
+      [/^Mc\s+Donalds?\b.*/i,"McDonald's"],
+      [/^Mercadona\b.*/i,'Mercadona'],
+      [/^Intermarche\b.*/i,'Intermarch\u00e9'],
+      [/^Pull\s+Bear\b.*/i,'Pull & Bear'],
+      [/^Zara\b.*/i,'Zara'],
+    ];
+    let lojaAltered=false;
+    for(const [re,label] of njMap){if(re.test(loja)){loja=label;lojaAltered=true;break;}}
+    if(!lojaAltered && local && local.toLowerCase()!==loja.toLowerCase())
+      return `${loja} · ${local}`;
+    return loja;
+  }
+
+  return d; // sem regra → original
+}
+
+function toTitleCase(s){
+  const skip=new Set(['de','da','do','dos','das','e','em','na','no','nas','nos','a','o','ao','à']);
+  return s.toLowerCase().split(/\s+/).map((w,i)=>
+    (i===0||!skip.has(w))?w.charAt(0).toUpperCase()+w.slice(1):w
+  ).join(' ');
+}
+
 function loadBudgets(){return lsGet(LS_BUDGETS,[]);}
 function saveBudgetsData(b){lsSet(LS_BUDGETS,b);}
 
@@ -899,12 +1162,92 @@ function loadCustomCats(){return lsGet(LS_CUSTOM_CATS,[]);}
 function saveCustomCats(c){lsSet(LS_CUSTOM_CATS,c);}
 function loadCustomExpenseCats(){return lsGet(LS_CUSTOM_EXPENSE_CATS,[]);}
 function saveCustomExpenseCats(c){lsSet(LS_CUSTOM_EXPENSE_CATS,c);}
-function loadCustomSources(){return lsGet(LS_CUSTOM_SOURCES,[]);}
+function _isCorruptedName(nome){return/[a-zA-Z\u00C0-\u024F]\d[a-zA-Z\u00C0-\u024F]/i.test(nome||'');}
+function loadCustomSources(){
+  const all=lsGet(LS_CUSTOM_SOURCES,[]);
+  const baseIds=new Set(CATEGORIAS_ENTRADA.map(c=>c.id));
+  const clean=all.filter(c=>{
+    if(!c||!c.id||!c.nome)return false;
+    if(baseIds.has(c.id))return false;
+    if(_isCorruptedName(c.nome))return false;
+    return true;
+  });
+  if(clean.length!==all.length)saveCustomSources(clean);
+  return clean;
+}
 function saveCustomSources(c){lsSet(LS_CUSTOM_SOURCES,c);}
-function loadEmojiOverrides(){return lsGet(LS_EMOJI_OVERRIDES,{});}
+function loadEmojiOverrides(){
+  const ov=lsGet(LS_EMOJI_OVERRIDES,{});
+  let changed=false;
+  Object.keys(ov).forEach(k=>{const o=ov[k];if(o&&typeof o==='object'&&o.nome&&_isCorruptedName(o.nome)){delete ov[k];changed=true;}});
+  if(changed)lsSet(LS_EMOJI_OVERRIDES,ov);
+  return ov;
+}
 function saveEmojiOverrides(o){lsSet(LS_EMOJI_OVERRIDES,o);}
 function loadSaidaOverrides(){return lsGet(LS_SAIDA_OVERRIDES,{});}
 function saveSaidaOverrides(o){lsSet(LS_SAIDA_OVERRIDES,o);}
+
+// ─── REIMBURSABLE HELPERS ─────────────────────────────────────────
+function loadReimbData(){return lsGet(LS_REIMB,{});}
+function saveReimbData(d){lsSet(LS_REIMB,d);}
+
+function isReimb(txId){const d=loadReimbData();return d[txId]==='reembolsavel'||d[txId]==='reembolsado';}
+function isReimbursed(txId){return loadReimbData()[txId]==='reembolsado';}
+
+function setReimbStatus(txId,status){
+  const d=loadReimbData();
+  if(status===null||status===undefined){delete d[txId];}
+  else d[txId]=status;
+  saveReimbData(d);
+}
+
+function onReimbToggleChange(){
+  const chk=document.getElementById('finReimbToggle');
+  const label=document.getElementById('finReimbLabel');
+  const row=document.getElementById('finReimbReimburseRow');
+  if(chk.checked){
+    label.textContent='Reembolsável pelo cliente 💼';
+    // Show "mark as reimbursed" only if already reimbursable
+    const tx=S.currentTx;
+    if(tx&&isReimb(tx.id_transacao)){row.style.display='block';}
+    else row.style.display='none';
+  }else{
+    label.textContent='Marcar como reembolsável pelo cliente';
+    row.style.display='none';
+  }
+}
+window.onReimbToggleChange=onReimbToggleChange;
+
+function markAsReimbursed(){
+  const tx=S.currentTx;if(!tx)return;
+  // Create a matching positive (refund) transaction linked to the original
+  const refundId='reimb_'+tx.id_transacao;
+  const alreadyExists=S.transactions.find(t=>t.id_transacao===refundId);
+  if(!alreadyExists){
+    const refund={
+      id_transacao:refundId,
+      data:new Date().toISOString().slice(0,10),
+      valor:Math.abs(+tx.valor),
+      descricao:'[Reembolso] '+((tx.descricao||'').slice(0,60)),
+      conta:tx.conta,
+      categoria:tx.categoria||'transferencia',
+      tipo:'entrada',
+      _reimbRefFor:tx.id_transacao
+    };
+    S.transactions.push(refund);
+  }
+  setReimbStatus(tx.id_transacao,'reembolsado');
+  const btn=document.getElementById('finReimbMarkBtn');
+  if(btn){btn.textContent='✅ Reembolso registado!';btn.classList.add('done');btn.disabled=true;}
+  saveCache();render();
+  if(S.apiUrl){
+    const refund=S.transactions.find(t=>t.id_transacao===refundId);
+    if(refund&&!alreadyExists){
+      try{apiCall('importTransactions',{transactions:[refund],bank:refund.conta});}catch{}
+    }
+  }
+}
+window.markAsReimbursed=markAsReimbursed;
 
 function applyEmojiOverrides(){
   const ov=loadEmojiOverrides();
@@ -989,7 +1332,11 @@ async function loadAll(){
   try{
     const d=await apiCall('loadAll');
     if(d.transactions&&d.transactions.length>0){
+      // Preservar categorias guardadas localmente — o servidor pode não as ter
+      const localCatById={};
+      S.transactions.forEach(t=>{if(t.categoria&&t.id_transacao)localCatById[t.id_transacao]=t.categoria;});
       S.transactions=d.transactions;
+      S.transactions.forEach(t=>{if(!t.categoria&&localCatById[t.id_transacao])t.categoria=localCatById[t.id_transacao];});
       applyCatMap(S.transactions);
       seedCatMap(S.transactions);
       S.transactions=dedupAlertasFromList(S.transactions);
@@ -998,10 +1345,36 @@ async function loadAll(){
       ['novo_banco','millennium'].forEach(b=>{const v=d.accounts[b];if(typeof v==='number'&&v!==0){S.accounts[b]=v;S.accounts._fromFile=true;}});
     }
     if(d.rules&&d.rules.length)S.rules=d.rules;
-    // Sincronizar orçamentos da Sheet → localStorage
+    // ── ORÇAMENTOS: restaurar do servidor quando localStorage está vazio ──
     if(d.budgets&&d.budgets.length){
-      const nb=d.budgets.map(b=>({categoria:b.categoria,limite:Number(b.limite_mensal||b.limite||0),gasto_atual:Number(b.gasto_atual||0)})).filter(b=>b.categoria&&b.limite>0);
-      if(nb.length)lsSet(LS_BUDGETS,nb);
+      const local=loadBudgets();
+      // Se não há orçamentos locais (ex: aba anónima), usa os do servidor
+      if(!local.length){
+        const fromServer=d.budgets.map(b=>({categoria:b.categoria,limite:parseFloat(b.limite_mensal)||parseFloat(b.limite)||0,gasto_atual:0})).filter(b=>b.limite>0);
+        if(fromServer.length)saveBudgetsData(fromServer);
+      }
+    }
+    // ── CATEGORIAS CUSTOMIZADAS: reconstruir a partir das transações ──
+    // Garante que mesmo sem localStorage as custom cats ficam disponíveis
+    if(d.transactions&&d.transactions.length>0){
+      seedCatMap(S.transactions);
+      const knownIds=new Set([...CATEGORIAS,...CATEGORIAS_ENTRADA].map(c=>c.id));
+      const existingCustom=loadCustomExpenseCats();
+      const existingCustomIds=new Set(existingCustom.map(c=>c.id));
+      const toAdd=[];
+      S.transactions.forEach(t=>{
+        if(t.categoria&&t.categoria.startsWith('custom_')&&!knownIds.has(t.categoria)&&!existingCustomIds.has(t.categoria)){
+          // Reconstrói nome legível a partir do ID
+          const parts=t.categoria.replace(/^custom_/,'').replace(/_\d+$/,'').split('_');
+          const nome=parts.map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ');
+          toAdd.push({id:t.categoria,nome,emoji:'📌'});
+          existingCustomIds.add(t.categoria);
+        }
+      });
+      if(toAdd.length){
+        saveCustomExpenseCats([...existingCustom,...toAdd]);
+        saveCustomCats([...loadCustomCats(),...toAdd]);
+      }
     }
     saveCache();render();
     updateConnStatus(true);
@@ -1046,17 +1419,27 @@ function renderBalance(){
 function renderStats(){
   const cur=curMonthKey();
   const ct=S.transactions.filter(t=>monthKey(t.data)===cur);
+  const rd=loadReimbData();
+  // Exclude reimbursable (pending) transactions from the saídas total
   const inA=ct.filter(t=>t.tipo==='entrada').reduce((s,t)=>s+Math.abs(+t.valor),0);
-  const outA=ct.filter(t=>t.tipo==='saida').reduce((s,t)=>s+Math.abs(+t.valor),0);
+  const outAll=ct.filter(t=>t.tipo==='saida');
+  const outA=outAll.filter(t=>rd[t.id_transacao]!=='reembolsavel'&&rd[t.id_transacao]!=='reembolsado').reduce((s,t)=>s+Math.abs(+t.valor),0);
+  const outReimbTotal=outAll.filter(t=>rd[t.id_transacao]==='reembolsavel'||rd[t.id_transacao]==='reembolsado').reduce((s,t)=>s+Math.abs(+t.valor),0);
   document.getElementById('finMonthIn').textContent=fmtEur(inA);
   document.getElementById('finMonthOut').textContent=fmtEur(outA);
+  // Sub-label: show reimbursable amount if any
+  const outStatSub=document.getElementById('finMonthOutDelta');
   const prev=new Date();prev.setMonth(prev.getMonth()-1);
   const pk=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0');
   const pt=S.transactions.filter(t=>monthKey(t.data)===pk);
   const pi=pt.filter(t=>t.tipo==='entrada').reduce((s,t)=>s+Math.abs(+t.valor),0);
-  const po=pt.filter(t=>t.tipo==='saida').reduce((s,t)=>s+Math.abs(+t.valor),0);
+  const po=pt.filter(t=>t.tipo==='saida'&&rd[t.id_transacao]!=='reembolsavel'&&rd[t.id_transacao]!=='reembolsado').reduce((s,t)=>s+Math.abs(+t.valor),0);
   document.getElementById('finMonthInDelta').textContent=pi?`${((inA-pi)/pi*100)>=0?'+':''}${((inA-pi)/pi*100).toFixed(0)}% vs. mês passado`:'';
-  document.getElementById('finMonthOutDelta').textContent=po?`${((outA-po)/po*100)>=0?'+':''}${((outA-po)/po*100).toFixed(0)}% vs. mês passado`:'';
+  if(outReimbTotal>0){
+    if(outStatSub)outStatSub.textContent=`+${fmtEur(outReimbTotal)} reembolsável`;
+  }else{
+    if(outStatSub)outStatSub.textContent=po?`${((outA-po)/po*100)>=0?'+':''}${((outA-po)/po*100).toFixed(0)}% vs. mês passado`:'';
+  }
 }
 
 function renderBudgets(){
@@ -1086,9 +1469,11 @@ function renderAllTx(){
   if(S.currentFilter==='in')list=list.filter(t=>t.tipo==='entrada');
   if(S.currentFilter==='out')list=list.filter(t=>t.tipo==='saida');
   if(S.currentFilter==='uncat')list=list.filter(t=>!t.categoria&&t.tipo===(_uncatTipo||'saida'));
+  if(S.currentFilter==='reimb'){const rd=loadReimbData();list=list.filter(t=>rd[t.id_transacao]==='reembolsavel'||rd[t.id_transacao]==='reembolsado');}
   if(_bankFilter==='novo_banco')list=list.filter(t=>t.conta==='novo_banco');
   if(_bankFilter==='millennium')list=list.filter(t=>t.conta==='millennium');
-  if(_catFilter&&_catFilter!=='all')list=list.filter(t=>t.categoria===_catFilter);
+  if(_catFilter==='__none__'){const _knownIds=new Set([...CATEGORIAS,...CATEGORIAS_ENTRADA,...loadCustomExpenseCats(),...loadCustomSources()].map(c=>c.id));list=list.filter(t=>!t.categoria||!_knownIds.has(t.categoria));}
+  else if(_catFilter&&_catFilter!=='all')list=list.filter(t=>t.categoria===_catFilter);
   if(!list.length){el.innerHTML='<div class="fin-empty"><div class="fin-empty-emoji">🔍</div><div class="fin-empty-title">Nenhuma transação</div><div class="fin-empty-sub">Ajusta os filtros ou importa um extrato.</div></div>';return;}
   el.innerHTML=list.map(txHtml).join('');
 }
@@ -1100,10 +1485,16 @@ function txHtml(t){
   const tipo=t.tipo==='entrada'?'in':'out';
   const sign=t.tipo==='entrada'?'+':'';
   const bank=t.conta==='novo_banco'?'NB':'MBCP';
-  return`<div class="fin-tx-item" onclick="openCatModal('${esc(t.id_transacao)}')">
+  // Reimbursable badge
+  const reimbState=loadReimbData()[t.id_transacao];
+  const reimbClass=reimbState?'is-reimb':'';
+  let reimbBadge='';
+  if(reimbState==='reembolsado')reimbBadge='<span class="fin-tx-reimb-badge reimbursed">✅ Reimb.</span>';
+  else if(reimbState==='reembolsavel')reimbBadge='<span class="fin-tx-reimb-badge">🔄 Reimb.</span>';
+  return`<div class="fin-tx-item ${reimbClass}" onclick="openCatModal('${esc(t.id_transacao)}')">
     <div class="fin-tx-icon">${cat.emoji}</div>
     <div class="fin-tx-body">
-      <div class="fin-tx-desc">${esc(t.descricao||'—')}</div>
+      <div class="fin-tx-desc" title="${esc(t.descricao||'')}"> ${esc(cleanDesc(t.descricao)||'—')}${reimbBadge}</div>
       <div class="fin-tx-meta"><span>${fmtDate(t.data)}</span><span>·</span><span>${bank}</span><span>·</span><span class="cat-tag">${isKnownCat?cat.nome:'Categorizar'}</span></div>
     </div>
     <div class="fin-tx-amt ${tipo}">${sign}${fmtEur(Math.abs(+t.valor))}</div>
@@ -1122,7 +1513,7 @@ function switchView(v,btn){
 window.switchView=switchView;
 
 // ─── FILTER STATE ────────────────────────────────────────────────
-let _dateFilterMode='all',_dateFrom=null,_dateTo=null;
+let _dateFilterMode='thismonth',_dateFrom=null,_dateTo=null;
 let _bankFilter='bank_all',_catFilter='all',_uncatTipo='saida';
 let _chartsOpen=false,_activeChartType=null;
 
@@ -1175,8 +1566,8 @@ window.applyBankFilter=applyBankFilter;
 
 function applyCatFilter(f,btn){
   _catFilter=f;
-  document.querySelectorAll('.fin-filter-chip[data-catfilter]').forEach(c=>c.classList.remove('active'));
-  if(btn)btn.classList.add('active');
+  // Update active state on all visible cat chips
+  document.querySelectorAll('.fin-filter-chip[data-catfilter]').forEach(c=>c.classList.toggle('active',c.dataset.catfilter===f));
   renderAllTx();
 }
 window.applyCatFilter=applyCatFilter;
@@ -1186,9 +1577,8 @@ function filterByCatFromPie(catId,tipo){
   const typeFilter=tipo==='entrada'?'in':'out';
   const typeBtn=document.querySelector(`.fin-filter-chip[data-filter="${typeFilter}"]`);
   applyFinFilter(typeFilter,typeBtn);
-  const targetCat=catId==='__none__'?'all':catId;
-  const catChip=document.querySelector(`.fin-filter-chip[data-catfilter="${targetCat}"]`);
-  applyCatFilter(targetCat,catChip);
+  const targetCat=catId==='__none__'?'__none__':catId;
+  applyCatFilter(targetCat,null);
   requestAnimationFrame(()=>{
     const el=document.getElementById('finAllTx');
     if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
@@ -1196,21 +1586,74 @@ function filterByCatFromPie(catId,tipo){
 }
 window.filterByCatFromPie=filterByCatFromPie;
 
-function populateCatFilterRow(){
-  const row=document.getElementById('finCatFilterRow');
-  if(!row)return;
-  let pool;
-  if(S.currentFilter==='in')pool=[...CATEGORIAS_ENTRADA,...loadCustomSources()];
-  else if(S.currentFilter==='out')pool=CATEGORIAS;
-  else pool=[...CATEGORIAS,...CATEGORIAS_ENTRADA,...loadCustomSources()];
-  row.querySelectorAll('[data-catfilter]:not([data-catfilter="all"])').forEach(e=>e.remove());
-  pool.forEach(cat=>{
+let _catFilterOpen=false;
+function toggleCatFilter(btn){
+  _catFilterOpen=!_catFilterOpen;
+  const expanded=document.getElementById('finCatFilterExpanded');
+  const pill=document.getElementById('finCatExpandBtn');
+  if(expanded)expanded.style.display=_catFilterOpen?'block':'none';
+  if(pill)pill.classList.toggle('active',_catFilterOpen);
+  if(_catFilterOpen)populateCatFilterExpanded();
+}
+window.toggleCatFilter=toggleCatFilter;
+
+function populateCatFilterExpanded(){
+  const saidasEl=document.getElementById('finCatFilterSaidas');
+  const entradasEl=document.getElementById('finCatFilterEntradas');
+  if(!saidasEl||!entradasEl)return;
+
+  const makeChip=(cat)=>{
     const chip=document.createElement('div');
-    chip.className='fin-filter-chip';chip.dataset.catfilter=cat.id;
+    chip.className='fin-filter-chip';
+    if(_catFilter===cat.id)chip.classList.add('active');
+    chip.dataset.catfilter=cat.id;
     chip.textContent=cat.emoji+' '+cat.nome;
     chip.onclick=function(){applyCatFilter(cat.id,this);};
-    row.appendChild(chip);
-  });
+    return chip;
+  };
+
+  // Saidas section
+  const saidaPool=getAllExpenseCats();
+  const saidaRow=document.createElement('div');
+  saidaRow.style.cssText='padding:4px 0 2px;';
+  const saidaLabel=document.createElement('div');
+  saidaLabel.style.cssText='font-size:0.55rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--danger);opacity:0.7;padding:4px 0 5px;';
+  saidaLabel.textContent='▸ Saídas';
+  saidaRow.appendChild(saidaLabel);
+  const saidaChips=document.createElement('div');
+  saidaChips.className='fin-filter-row';
+  saidaChips.style.flexWrap='wrap';
+  saidaPool.forEach(cat=>saidaChips.appendChild(makeChip(cat)));
+  saidaRow.appendChild(saidaChips);
+  saidasEl.innerHTML='';
+  saidasEl.appendChild(saidaRow);
+
+  // Entradas section
+  const entradaPool=[...CATEGORIAS_ENTRADA,...loadCustomSources()];
+  const entradaRow=document.createElement('div');
+  entradaRow.style.cssText='padding:4px 0 2px;border-top:1px solid var(--border);margin-top:6px;';
+  const entradaLabel=document.createElement('div');
+  entradaLabel.style.cssText='font-size:0.55rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--paid);opacity:0.7;padding:6px 0 5px;';
+  entradaLabel.textContent='▸ Entradas';
+  entradaRow.appendChild(entradaLabel);
+  const entradaChips=document.createElement('div');
+  entradaChips.className='fin-filter-row';
+  entradaChips.style.flexWrap='wrap';
+  entradaPool.forEach(cat=>entradaChips.appendChild(makeChip(cat)));
+  entradaRow.appendChild(entradaChips);
+  entradasEl.innerHTML='';
+  entradasEl.appendChild(entradaRow);
+}
+window.populateCatFilterExpanded=populateCatFilterExpanded;
+
+function populateCatFilterRow(){
+  // Update __none__ chip active state
+  const noneChip=document.querySelector('.fin-filter-chip[data-catfilter="__none__"]');
+  if(noneChip)noneChip.classList.toggle('active',_catFilter==='__none__');
+  const allChip=document.querySelector('.fin-filter-chip[data-catfilter="all"]');
+  if(allChip)allChip.classList.toggle('active',_catFilter==='all');
+  // If expanded, refresh it too
+  if(_catFilterOpen)populateCatFilterExpanded();
 }
 
 // ─── CATEGORIZAÇÃO ────────────────────────────────────────────────
@@ -1218,12 +1661,39 @@ function openCatModal(txId){
   const tx=S.transactions.find(t=>t.id_transacao===txId);
   if(!tx)return;
   S.currentTx=tx;S.selectedCat=tx.categoria||null;
-  document.getElementById('finCatModalDesc').textContent=tx.descricao||'—';
+  document.getElementById('finCatModalDesc').textContent=cleanDesc(tx.descricao)||'—';document.getElementById('finCatModalDesc').title=tx.descricao||'';
   document.getElementById('finCatModalAmt').textContent=`${fmtDate(tx.data)} · ${fmtEur(Math.abs(+tx.valor))} · ${tx.conta==='novo_banco'?'Novo Banco':'Millennium'}`;
   const grid=document.getElementById('finCatGrid');
   const isEnt=tx.tipo==='entrada';
   if(isEnt){applyEmojiOverrides();renderSourceGrid('finCatGrid',S.selectedCat,true);}
   else{grid.innerHTML=CATEGORIAS.map(c=>`<button class="fin-cat-btn ${S.selectedCat===c.id?'selected':''}" data-cat="${c.id}" onclick="selectCat('${c.id}')"><span class="cat-emoji">${c.emoji}</span><span>${c.nome}</span></button>`).join('');}
+  // Populate reimbursable section — only show for saidas
+  const reimbSec=document.getElementById('finReimbSection');
+  const reimbToggle=document.getElementById('finReimbToggle');
+  const reimbLabel=document.getElementById('finReimbLabel');
+  const reimbReimburseRow=document.getElementById('finReimbReimburseRow');
+  const reimbMarkBtn=document.getElementById('finReimbMarkBtn');
+  if(reimbSec){
+    if(isEnt){reimbSec.style.display='none';}
+    else{
+      reimbSec.style.display='block';
+      const reimbState=loadReimbData()[txId];
+      const isR=reimbState==='reembolsavel'||reimbState==='reembolsado';
+      const isDone=reimbState==='reembolsado';
+      reimbToggle.checked=isR;
+      if(isR){
+        reimbLabel.textContent=isDone?'✅ Reembolsado':'Reembolsável pelo cliente 💼';
+        reimbReimburseRow.style.display='block';
+        if(reimbMarkBtn){
+          if(isDone){reimbMarkBtn.textContent='✅ Reembolso já registado';reimbMarkBtn.classList.add('done');reimbMarkBtn.disabled=true;}
+          else{reimbMarkBtn.textContent='✅ Marcar como reembolsado';reimbMarkBtn.classList.remove('done');reimbMarkBtn.disabled=false;}
+        }
+      }else{
+        reimbLabel.textContent='Marcar como reembolsável pelo cliente';
+        reimbReimburseRow.style.display='none';
+      }
+    }
+  }
   document.getElementById('finCatModal').classList.add('open');
 }
 window.openCatModal=openCatModal;
@@ -1248,6 +1718,18 @@ async function saveFinCategory(){
     const ex=S.rules.find(r=>r.padrao===pat);
     if(ex){ex.categoria=S.selectedCat;ex.confianca=Math.min(1,(ex.confianca||0.5)+0.1);}
     else S.rules.push({padrao:pat,categoria:S.selectedCat,confianca:0.7});
+  }
+  // Save reimbursable state
+  const reimbToggle=document.getElementById('finReimbToggle');
+  if(reimbToggle&&tx.tipo==='saida'){
+    const curState=loadReimbData()[tx.id_transacao];
+    if(reimbToggle.checked){
+      // Only set to reembolsavel if not already reembolsado
+      if(curState!=='reembolsado')setReimbStatus(tx.id_transacao,'reembolsavel');
+    }else{
+      // User unchecked — remove status (but don't remove if already reembolsado)
+      if(curState!=='reembolsado')setReimbStatus(tx.id_transacao,null);
+    }
   }
   saveCatMap(map);saveCache();render();closeFinCatModal();
   if(S.apiUrl){try{await apiCall('updateTransactionCategory',{id_transacao:tx.id_transacao,categoria:S.selectedCat,learn});}catch(e){console.warn(e.message);}}
@@ -1411,14 +1893,6 @@ window.closeAddChoiceModal=closeAddChoiceModal;
 
 // ─── BUDGETS EDITOR ───────────────────────────────────────────────
 function openBudgetEditor(){
-  // Verificar se localStorage está disponível
-  try{
-    localStorage.setItem('_fin_test','1');
-    if(localStorage.getItem('_fin_test')!=='1')throw new Error('leitura falhou');
-    localStorage.removeItem('_fin_test');
-  }catch(e){
-    alert('⚠️ O armazenamento local está bloqueado neste browser/contexto.\n\nOs orçamentos não poderão ser guardados.\n\nSolução: abre este ficheiro noutro browser ou certifica-te de que as cookies/armazenamento local não estão bloqueados nas definições.');
-  }
   rebuildBudgetEditList();renderCatManageList();
   document.getElementById('finBudgetModal').classList.add('open');
 }
@@ -1471,26 +1945,7 @@ async function saveBudgets(){
   const inputs=document.querySelectorAll('.budget-input');
   const nb=[];
   inputs.forEach(i=>{const v=parseFloat(i.value);if(!isNaN(v)&&v>0)nb.push({categoria:i.dataset.cat,limite:v,gasto_atual:0});});
-  // Guardar com feedback explícito
-  try{
-    localStorage.setItem(LS_BUDGETS,JSON.stringify(nb));
-  }catch(e){
-    alert('Erro ao guardar orçamentos: '+e.message+'\n\nO armazenamento local pode estar cheio ou bloqueado.');
-    return;
-  }
-  // Verificar que ficou mesmo guardado
-  const verificar=JSON.parse(localStorage.getItem(LS_BUDGETS)||'[]');
-  if(verificar.length!==nb.length){
-    alert('Erro: os orçamentos não ficaram guardados. Tenta num browser diferente.');
-    return;
-  }
-  render();closeBudgetEditor();
-  // Feedback visual de sucesso
-  const toast=document.createElement('div');
-  toast.textContent='✅ Orçamentos guardados!';
-  toast.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#3ecf70;color:#0d0d0f;padding:10px 20px;border-radius:12px;font-weight:600;font-size:0.82rem;z-index:9999;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
-  document.body.appendChild(toast);
-  setTimeout(()=>toast.remove(),2500);
+  saveBudgetsData(nb);render();closeBudgetEditor();
   if(S.apiUrl){try{await apiCall('saveBudgets',{budgets:nb});}catch{}}
 }
 window.saveBudgets=saveBudgets;
@@ -1677,13 +2132,15 @@ function parseCsv(text,bank){
   const sep=text.includes(';')?';':',';
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length<2)return{transactions:[],balance:null};
+  let bal=null;
+  for(let i=0;i<Math.min(20,lines.length);i++){const p=lines[i].split(sep).map(s=>s.trim().replace(/"/g,''));const lbl=(p[0]||'').toLowerCase();if(/saldo\s+dispon/.test(lbl)||/saldo\s+contabil/.test(lbl)){const v=parsePtNum((p[1]||'').replace(/\s*EUR\s*/i,''));if(!isNaN(v)&&v>=0){bal=v;if(/dispon/.test(lbl))break;}}}
   let hi=0;
-  for(let i=0;i<Math.min(10,lines.length);i++){const l=lines[i].toLowerCase();if(l.includes('data')||l.includes('descri')||l.includes('montante')||l.includes('valor')){hi=i;break;}}
+  for(let i=0;i<Math.min(20,lines.length);i++){const l=lines[i].toLowerCase();const hasDate=/\bdata\b|date/.test(l);const hasAmt=/montante|valor|amount|debit|credit/.test(l);if(hasDate&&hasAmt){hi=i;break;}}
   const hdr=lines[hi].split(sep).map(h=>h.trim().toLowerCase().replace(/"/g,''));
-  const cD=hdr.findIndex(h=>/data|date/.test(h));
+  const cD=hdr.findIndex(h=>/\bdata\b|^date/.test(h));
   const cDesc=hdr.findIndex(h=>/descri|text|histor/.test(h));
-  const cVal=hdr.findIndex(h=>/montante|valor|amount|debit|credit/.test(h));
-  if(cD===-1||cVal===-1)return{transactions:[],balance:null};
+  const cVal=hdr.findIndex(h=>/montante|amount|debit|credit|^valor$/.test(h));
+  if(cD===-1||cVal===-1)return{transactions:[],balance:bal};
   const res=[];const idC={};
   for(const line of lines.slice(hi+1)){
     const p=splitCsv(line,sep);if(p.length<2)continue;
@@ -1692,7 +2149,7 @@ function parseCsv(text,bank){
     const desc=(cDesc>=0?p[cDesc]:p[1]||'').trim();
     res.push({id_transacao:buildTxId(iso,desc,v,bank,idC),data:iso,valor:v,descricao:desc,conta:bank,categoria:'',tipo:v>=0?'entrada':'saida'});
   }
-  return{transactions:res,balance:null};
+  return{transactions:res,balance:bal};
 }
 
 function splitCsv(l,sep){const r=[];let cur='',inQ=false;for(const c of l){if(c==='"'){inQ=!inQ;continue;}if(c===sep&&!inQ){r.push(cur);cur='';continue;}cur+=c;}r.push(cur);return r.map(s=>s.trim());}
@@ -1723,36 +2180,52 @@ function buildTxId(dt,desc,v,bank,ctr){const b=hashId(dt+'|'+desc+'|'+v+'|'+bank
 // ─── ALERTA DEDUP ────────────────────────────────────────────────
 // Detects "Alerta novobanco - Movimento a Débito" style entries from any bank account.
 // These are SMS/email alerts that shadow a real transaction — we remove the alert,
-// keeping the real one. Also deduplicates identical alerts against each other.
+// keeping the real one (patching its date to the alert date, which is more accurate).
+// Also deduplicates identical alerts against each other.
 function isAlertaTx(t){
   // Covers: "Alerta novobanco", "Alerta Novo Banco", "Alerta NovoBanco - Movimento a Débito", etc.
   return/alerta\s+novo.?banco/i.test(t.descricao||'');
 }
-function isAlertaDuplicate(alert,realList){
-  if(!isAlertaTx(alert))return false;
+// Returns the matching real transaction (same tipo, same value ±€0.02, within 15 days),
+// or null if none found.
+// NOTE: We intentionally do NOT filter by conta — the alert arrives via MBCP but shadows
+// a real NovoBanco transaction, so cross-account matching is required.
+function findAlertaMatch(alert,realList){
+  if(!isAlertaTx(alert))return null;
   const alertAmt=Math.abs(+alert.valor);
   const alertDate=new Date(alert.data);
-  for(const real of realList){
-    if(isAlertaTx(real))continue;
-    // Match saida alerts to saida real txs (don't care which bank)
-    if(real.tipo!==alert.tipo)continue;
+  // Build candidates: non-alert txs with same tipo and matching amount, sorted by date proximity
+  const candidates=realList.filter(real=>{
+    if(isAlertaTx(real))return false;
+    if(real.tipo!==alert.tipo)return false;
     const realAmt=Math.abs(+real.valor);
-    // Exact match or within €0.02 tolerance
-    const diff=Math.abs(realAmt-alertAmt);
-    if(diff>0.02)continue;
-    const realDate=new Date(real.data);
-    const diffDays=Math.abs((alertDate-realDate)/(1000*60*60*24));
-    if(diffDays<=15)return true;
-  }
-  return false;
+    if(Math.abs(realAmt-alertAmt)>0.02)return false;
+    const diffDays=Math.abs((alertDate-new Date(real.data))/(1000*60*60*24));
+    return diffDays<=15;
+  });
+  if(!candidates.length)return null;
+  // Prefer same-account match; fall back to cross-account
+  const sameAccount=candidates.find(r=>r.conta===alert.conta);
+  return sameAccount||candidates[0];
 }
-// Remove Alerta duplicates: alerts that shadow real txs, AND duplicate alerts (same value+date)
+// Remove Alerta duplicates: for each alert that has a real tx match, patch the real tx's date
+// to the alert date (email is immediate; extrato can lag by days), then discard the alert.
+// Also deduplicates identical alerts against each other.
 function dedupAlertasFromList(list){
   const nonAlerts=list.filter(t=>!isAlertaTx(t));
   const alerts=list.filter(t=>isAlertaTx(t));
-  // Remove alerts that have a corresponding real transaction
-  const noShadow=alerts.filter(a=>!isAlertaDuplicate(a,nonAlerts));
-  // Also deduplicate alerts against each other (same valor + data)
+  // For each alert, find its real counterpart and update the date
+  const noShadow=alerts.filter(a=>{
+    const match=findAlertaMatch(a,nonAlerts);
+    if(!match)return true; // keep alert — no real tx found yet
+    // Patch the real transaction's date to the alert's (more accurate) date
+    if(match.data!==a.data){
+      match.data=a.data;
+      match._dateFromAlerta=true; // mark so we know it was corrected
+    }
+    return false; // discard alert
+  });
+  // Also deduplicate remaining alerts against each other (same valor + data)
   const seenAlerts=new Set();
   const deduped=noShadow.filter(a=>{
     const key=`${a.data}|${Math.abs(+a.valor)}`;
@@ -1781,6 +2254,7 @@ async function importTransactions(newTxs,bank,opts){
   const beforeDedup=merged.length;
   S.transactions=dedupAlertasFromList(merged);
   const alertasRemoved=beforeDedup-S.transactions.length;
+  const datesPatched=S.transactions.filter(t=>t._dateFromAlerta).length;
   applyCatMap(S.transactions);
   if(typeof bal==='number'&&!isNaN(bal)&&bal>=0){S.accounts[bank]=bal;S.accounts._fromFile=true;}
   saveCache();render();
@@ -1788,12 +2262,13 @@ async function importTransactions(newTxs,bank,opts){
     ?`Substituído: ${toAdd.length} transações de ${bank==='novo_banco'?'Novo Banco':'Millennium'}.`
     :`Importadas ${toAdd.length} novas transações${sk>0?' · '+sk+' duplicadas ignoradas':''}`;
   if(alertasRemoved>0)msg+=` · ${alertasRemoved} alerta${alertasRemoved>1?'s':''} Novo Banco removido${alertasRemoved>1?'s':''} (duplicado${alertasRemoved>1?'s':''})`;
+  if(datesPatched>0)msg+=` · ${datesPatched} data${datesPatched>1?'s':''} corrigida${datesPatched>1?'s':''} (via email)`;
   alert(msg);
   if(S.apiUrl){try{if(rep){await apiCall('replaceTransactionsForBank',{bank,transactions:S.transactions.filter(t=>t.conta===bank),balance:bal});}else if(toAdd.length){await apiCall('importTransactions',{transactions:toAdd,bank,balance:bal});}}catch(e){console.warn(e.message);}}
 }
 
 // ─── PIE CHART ───────────────────────────────────────────────────
-const PIE_COLORS=['#D4A574','#C58552','#B7703F','#E8C4A0','#4A7C8C','#5A9CAA','#3D6B7A','#6BA8B5','#C45C4A','#D47C5C','#A54A3A','#E0937A','#4A8C5C','#5AA566','#3A7A4A','#6BA976','#7A5C8C','#8A6CA0','#6A4C7A','#9A7CB0','#8A7C4A','#A09A52','#6A6A38','#B5A968'];
+const PIE_COLORS=['#E8A838','#5B9CF6','#E05C5C','#4CC97A','#C46BE0','#F0C040','#3BBFBF','#F07A40','#8B6CF6','#60C040','#E060A0','#40C8E0','#D4804A','#7060E8','#50D890','#E84060','#A0C840','#4080F0','#E89040','#40D0C0'];
 let _pieType='saida';
 let _pieSliceMeta=[];
 
@@ -1806,6 +2281,9 @@ function toggleAllCharts(btn){
   btn.classList.toggle('active',_chartsOpen);
   if(_chartsOpen){
     _activeChartType='both';
+    // Default to Este mês when opening charts
+    const thisMonthBtn=document.querySelector('.fin-date-chip[data-mode="thismonth"]');
+    applyDateFilter('thismonth',thisMonthBtn);
     populateHeatmapCatSelect();
     requestAnimationFrame(()=>{renderPieChart();renderHeatmap();});
   }else _activeChartType=null;
@@ -1824,13 +2302,25 @@ function renderPieChart(){
   const legend=document.getElementById('finPieLegend');
   if(!canvas||!legend)return;
   const list=getDateFilteredTx().filter(t=>t.tipo===_pieType);
+  // Exclude reimbursable transactions from saídas pie
+  const rd=loadReimbData();
+  const filtList=_pieType==='saida'?list.filter(t=>rd[t.id_transacao]!=='reembolsavel'&&rd[t.id_transacao]!=='reembolsado'):list;
   const bycat={};
   const _knownCatIds=new Set([...CATEGORIAS,...CATEGORIAS_ENTRADA,...loadCustomExpenseCats(),...loadCustomSources()].map(c=>c.id));
-  list.forEach(t=>{const raw=t.categoria;const k=(raw&&_knownCatIds.has(raw))?raw:'__none__';bycat[k]=(bycat[k]||0)+Math.abs(+t.valor);});
+  filtList.forEach(t=>{const raw=t.categoria;const k=(raw&&_knownCatIds.has(raw))?raw:'__none__';bycat[k]=(bycat[k]||0)+Math.abs(+t.valor);});
   const entries=Object.entries(bycat).sort((a,b)=>b[1]-a[1]);
   const totalSpent=entries.reduce((s,e)=>s+e[1],0);
   let remAmt=0,totalForPie=totalSpent;
-  if(_pieType==='saida'){const inc=getDateFilteredTx().filter(t=>t.tipo==='entrada').reduce((s,t)=>s+Math.abs(+t.valor),0);if(inc>totalSpent){remAmt=inc-totalSpent;totalForPie=inc;}}
+  if(_pieType==='saida'){
+    if(_dateFilterMode==='thismonth'){
+      const realBal=(S.accounts.novo_banco||0)+(S.accounts.millennium||0);
+      const ref=totalSpent+realBal;
+      if(ref>totalSpent){remAmt=realBal;totalForPie=ref;}
+    } else {
+      const inc=getDateFilteredTx().filter(t=>t.tipo==='entrada').reduce((s,t)=>s+Math.abs(+t.valor),0);
+      if(inc>totalSpent){remAmt=inc-totalSpent;totalForPie=inc;}
+    }
+  }
   const dpr=window.devicePixelRatio||1;
   const size=200;
   canvas.width=size*dpr;canvas.height=size*dpr;
@@ -1868,7 +2358,7 @@ function renderPieChart(){
     const filterCatId=catId==='__none__'?'__none__':catId;
     return`<div class="fin-pie-legend-item fin-pie-legend-item--clickable" onclick="filterByCatFromPie('${filterCatId}','${_pieType}')" title="Ver transações de ${cat.nome}"><div class="fin-pie-legend-dot" style="background:${PIE_COLORS[i%PIE_COLORS.length]}"></div><span class="fin-pie-legend-label">${cat.emoji} ${cat.nome} (${pct}%)</span><span class="fin-pie-legend-amt">${fmtEur(amt)}</span></div>`;
   });
-  if(_pieType==='saida'&&remAmt>0){const rp=Math.round((remAmt/totalForPie)*100);lgItems.push(`<div class="fin-pie-legend-item"><div class="fin-pie-legend-dot" style="background:#5CA876"></div><span class="fin-pie-legend-label">✅ Sobrou (${rp}%)</span><span class="fin-pie-legend-amt">${fmtEur(remAmt)}</span></div>`);}
+  if(_pieType==='saida'&&remAmt>0){const rp=Math.round((remAmt/totalForPie)*100);const remLabel=_dateFilterMode==='thismonth'?'🏦 Na conta agora':'✅ Sobrou';lgItems.push(`<div class="fin-pie-legend-item"><div class="fin-pie-legend-dot" style="background:#5CA876"></div><span class="fin-pie-legend-label">${remLabel} (${rp}%)</span><span class="fin-pie-legend-amt">${fmtEur(remAmt)}</span></div>`);}
   legend.innerHTML=lgItems.join('');
   // Hover
   const hl=document.getElementById('finPieHoverLabel');
@@ -1909,10 +2399,52 @@ function renderPieChart(){
     if(sl.catId==='__remaining__')return;
     filterByCatFromPie(sl.catId,_pieType);
   }
+  function _getTouchSliceAt(touch){
+    const rect=canvas.getBoundingClientRect();
+    const px=touch.clientX-rect.left,py=touch.clientY-rect.top;
+    const dx=px-size/2,dy=py-size/2,dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<innerR||dist>r+6)return -1;
+    let a=Math.atan2(dy,dx)+Math.PI/2;
+    if(a<0)a+=2*Math.PI;
+    for(let i=0;i<_pieSliceMeta.length;i++){
+      let s=_pieSliceMeta[i].startAngle+Math.PI/2;let en=_pieSliceMeta[i].endAngle+Math.PI/2;
+      if(s<0)s+=2*Math.PI;if(en<0)en+=2*Math.PI;
+      if(s>en){if(a>=s||a<=en){return i;}}else{if(a>=s&&a<=en){return i;}}
+    }
+    return -1;
+  }
+  let _touchedSlice=-1;
+  function onTouchStart(e){
+    e.preventDefault();
+    const found=_getTouchSliceAt(e.touches[0]);
+    _touchedSlice=found;
+    if(found===-1){if(hl)hl.classList.remove('visible');return;}
+    const sl=_pieSliceMeta[found];
+    const pct=Math.round((sl.amt/totalForPie)*100);
+    const nm=sl.catId==='__remaining__'?'✅ Sobrou':(()=>{const c=catById(sl.catId==='__none__'?null:sl.catId);return c.emoji+' '+c.nome;})();
+    document.getElementById('finPieHoverPct').textContent=pct+'%';
+    document.getElementById('finPieHoverName').textContent=nm;
+    if(hl)hl.classList.add('visible');
+  }
+  function onTouchEnd(e){
+    e.preventDefault();
+    const found=_getTouchSliceAt(e.changedTouches[0]);
+    if(found!==-1&&found===_touchedSlice){
+      const sl=_pieSliceMeta[found];
+      if(sl.catId!=='__remaining__'){setTimeout(()=>{if(hl)hl.classList.remove('visible');},600);filterByCatFromPie(sl.catId,_pieType);return;}
+    }
+    setTimeout(()=>{if(hl)hl.classList.remove('visible');},1200);
+  }
   canvas._phh=onHover;canvas._phl=()=>{if(hl)hl.classList.remove('visible');canvas.style.cursor='default';};canvas._phc=onClick;
+  canvas._pth=onTouchStart;canvas._pte=onTouchEnd;
   canvas.addEventListener('mousemove',canvas._phh);
   canvas.addEventListener('mouseleave',canvas._phl);
   canvas.addEventListener('click',canvas._phc);
+  if(canvas._pthOld)canvas.removeEventListener('touchstart',canvas._pthOld);
+  if(canvas._pteOld)canvas.removeEventListener('touchend',canvas._pteOld);
+  canvas._pthOld=onTouchStart;canvas._pteOld=onTouchEnd;
+  canvas.addEventListener('touchstart',onTouchStart,{passive:false});
+  canvas.addEventListener('touchend',onTouchEnd,{passive:false});
 }
 window.renderPieChart=renderPieChart;
 
@@ -1975,6 +2507,50 @@ function filterByDay(iso){
   renderAllTx();
 }
 window.filterByDay=filterByDay;
+
+// ─── LIMPA DADOS CORROMPIDOS DO LOCALSTORAGE ──────────────────────
+(function cleanCorrupted(){
+  const VALID_ENTRADA_IDS=new Set(['salario','bleem','desperta','rc','pikatta','shifu','casamentos','freela','wise']);
+  const VALID_SAIDA_IDS=new Set(['alimentacao','restaurante','transporte','aluguel','casa','contas','saude','lazer','compras','casamento','transferencia','outros']);
+  function isCorrupt(nome){return!nome||/[a-z\u00C0-\u024F]\d[a-z\u00C0-\u024F]/i.test(nome);}
+
+  // Limpa custom sources (entradas)
+  try{
+    const src=JSON.parse(localStorage.getItem('fin_custom_income_sources_v1')||'[]');
+    const clean=src.filter(c=>c&&c.id&&c.nome&&!isCorrupt(c.nome)&&!VALID_ENTRADA_IDS.has(c.id));
+    if(clean.length!==src.length)localStorage.setItem('fin_custom_income_sources_v1',JSON.stringify(clean));
+  }catch(e){}
+
+  // Limpa custom expense cats (saídas)
+  try{
+    const ec=JSON.parse(localStorage.getItem('fin_custom_expense_cats_v1')||'[]');
+    const clean=ec.filter(c=>c&&c.id&&c.nome&&!isCorrupt(c.nome));
+    if(clean.length!==ec.length)localStorage.setItem('fin_custom_expense_cats_v1',JSON.stringify(clean));
+  }catch(e){}
+
+  // Limpa legacy custom cats
+  try{
+    const lc=JSON.parse(localStorage.getItem('fin_custom_cats_v1')||'[]');
+    const clean=lc.filter(c=>c&&c.id&&c.nome&&!isCorrupt(c.nome));
+    if(clean.length!==lc.length)localStorage.setItem('fin_custom_cats_v1',JSON.stringify(clean));
+  }catch(e){}
+
+  // Limpa emoji overrides corrompidos (entrada e saída)
+  try{
+    const ov=JSON.parse(localStorage.getItem('fin_source_emoji_overrides_v1')||'{}');
+    let ch=false;
+    Object.keys(ov).forEach(k=>{if(ov[k]&&ov[k].nome&&isCorrupt(ov[k].nome)){delete ov[k];ch=true;}});
+    if(ch)localStorage.setItem('fin_source_emoji_overrides_v1',JSON.stringify(ov));
+  }catch(e){}
+
+  // Limpa saida overrides corrompidos
+  try{
+    const ov=JSON.parse(localStorage.getItem('fin_saida_cat_overrides_v1')||'{}');
+    let ch=false;
+    Object.keys(ov).forEach(k=>{if(ov[k]&&ov[k].nome&&isCorrupt(ov[k].nome)){delete ov[k];ch=true;}});
+    if(ch)localStorage.setItem('fin_saida_cat_overrides_v1',JSON.stringify(ov));
+  }catch(e){}
+})();
 
 // ─── INIT ─────────────────────────────────────────────────────────
 (async function init(){
